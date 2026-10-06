@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopApi.Dtos.Products;
 using ShopApi.Interfaces;
@@ -56,10 +57,11 @@ public class ProductsController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(
-        CreateProductDto dto
-    )
+            CreateProductDto dto
+        )
     {
         var result =
             await _productService.CreateAsync(dto);
@@ -74,11 +76,12 @@ public class ProductsController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
-        int id,
-        UpdateProductDto dto
-    )
+            int id,
+            UpdateProductDto dto
+        )
     {
         var result =
             await _productService.UpdateAsync(
@@ -95,10 +98,11 @@ public class ProductsController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(
-        int id
-    )
+            int id
+        )
     {
         await _productService.DeleteAsync(id);
 
@@ -111,11 +115,12 @@ public class ProductsController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{productId:int}/images")]
     public async Task<IActionResult> UploadImage(
-    int productId,
-    [FromForm] UploadProductImageDto dto
-    )
+        int productId,
+        [FromForm] UploadProductImageDto dto
+        )
     {
         var result =
             await _productService.UploadImageAsync(
@@ -133,11 +138,12 @@ public class ProductsController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{productId:int}/images/{imageId:int}")]
     public async Task<IActionResult> DeleteImage(
-    int productId,
-    int imageId
-)
+        int productId,
+        int imageId
+    )
     {
         await _productService.DeleteImageAsync(
             productId,
@@ -153,11 +159,12 @@ public class ProductsController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPatch("{productId:int}/images/{imageId:int}/main")]
     public async Task<IActionResult> SetMainImage(
-    int productId,
-    int imageId
-)
+        int productId,
+        int imageId
+    )
     {
         var result =
             await _productService.SetMainImageAsync(

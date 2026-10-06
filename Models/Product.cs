@@ -19,4 +19,6 @@ public class Product
     public Category Category { get; set; } = null!;
 
     public List<ProductImage> Images { get; set; } = new();
+
+    public List<Favorite> Favorites { get; set; } = new();
 }

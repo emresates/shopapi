@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopApi.Dtos.Categories;
 using ShopApi.Interfaces;
@@ -50,10 +51,11 @@ public class CategoriesController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(
-        CreateCategoryDto dto
-    )
+    CreateCategoryDto dto
+)
     {
         var result =
             await _categoryService.CreateAsync(dto);
@@ -68,11 +70,12 @@ public class CategoriesController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
-        int id,
-        UpdateCategoryDto dto
-    )
+            int id,
+            UpdateCategoryDto dto
+        )
     {
         var result =
             await _categoryService.UpdateAsync(
@@ -89,10 +92,11 @@ public class CategoriesController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(
-        int id
-    )
+            int id
+        )
     {
         await _categoryService.DeleteAsync(id);
 

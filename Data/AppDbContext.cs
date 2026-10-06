@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<ProductImage> ProductImages { get; set; }
 
     public DbSet<User> Users { get; set; }
+
+    public DbSet<Favorite> Favorites { get; set; }
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
     )
@@ -42,5 +44,23 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(x => x.Email)
             .IsUnique();
+        modelBuilder.Entity<Favorite>()
+            .HasKey(x => new
+            {
+                x.UserId,
+                x.ProductId
+            });
+
+        modelBuilder.Entity<Favorite>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.Favorites)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Favorite>()
+            .HasOne(x => x.Product)
+            .WithMany(x => x.Favorites)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

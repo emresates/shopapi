@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using ShopApi.Data;
 using ShopApi.Interfaces;
 using ShopApi.Middlewares;
@@ -44,6 +45,11 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAuthService,
     AuthService
+>();
+
+builder.Services.AddScoped<
+    IFavoriteService,
+    FavoriteService
 >();
 
 var jwtKey =
@@ -93,6 +99,30 @@ builder.Services
             };
     });
 
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        "bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "JWT access token gir."
+        }
+    );
+
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(
+                "bearer",
+                document
+            )] = []
+        }
+    );
+});
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -105,6 +135,7 @@ app.MapControllers();
 
 // Global exception middleware
 app.UseMiddleware<ExceptionMiddleware>();
+
 
 
 // Swagger / OpenAPI
