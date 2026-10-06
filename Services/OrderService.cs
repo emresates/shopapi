@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using ShopApi.Constants;
 using ShopApi.Data;
 using ShopApi.Dtos.Orders;
 using ShopApi.Exceptions;
 using ShopApi.Interfaces;
 using ShopApi.Models;
+using ShopApi.Rules;
 
 namespace ShopApi.Services;
 
@@ -71,7 +73,7 @@ public class OrderService : IOrderService
             {
                 UserId = userId,
 
-                Status = "Pending",
+                Status = OrderStatuses.Pending,
 
                 ShippingFullName =
                     address.FullName,
@@ -308,5 +310,209 @@ public class OrderService : IOrderService
                 "insufficientStock"
             );
         }
+    }
+
+    public async Task<OrderDto> UpdateStatusAsync(
+    int orderId,
+    UpdateOrderStatusDto dto
+)
+    {
+        var order =
+            await _context.Orders
+                .FirstOrDefaultAsync(
+                    x => x.Id == orderId
+                );
+
+        if (order == null)
+        {
+            throw new AppException(
+                "Sipariş bulunamadı.",
+                404,
+                "orderNotFound"
+            );
+        }
+
+        var newStatus =
+            NormalizeStatus(dto.Status);
+
+        if (order.Status == newStatus)
+        {
+            throw new AppException(
+                "Sipariş zaten bu durumda.",
+                409,
+                "orderAlreadyInStatus"
+            );
+        }
+
+        var canTransition =
+            OrderStatusRules.CanTransition(
+                order.Status,
+                newStatus
+            );
+
+        if (!canTransition)
+        {
+            throw new AppException(
+                $"{order.Status} durumundaki sipariş {newStatus} durumuna geçirilemez.",
+                409,
+                "invalidOrderStatusTransition"
+            );
+        }
+
+        order.Status =
+            newStatus;
+
+        await _context.SaveChangesAsync();
+
+        return await GetOrderByIdForAdminAsync(
+            order.Id
+        );
+    }
+
+    private static string NormalizeStatus(
+    string status
+)
+    {
+        if (
+            status.Equals(
+                OrderStatuses.Pending,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return OrderStatuses.Pending;
+        }
+
+        if (
+            status.Equals(
+                OrderStatuses.Paid,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return OrderStatuses.Paid;
+        }
+
+        if (
+            status.Equals(
+                OrderStatuses.Preparing,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return OrderStatuses.Preparing;
+        }
+
+        if (
+            status.Equals(
+                OrderStatuses.Shipped,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return OrderStatuses.Shipped;
+        }
+
+        if (
+            status.Equals(
+                OrderStatuses.Delivered,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return OrderStatuses.Delivered;
+        }
+
+        if (
+            status.Equals(
+                OrderStatuses.Cancelled,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return OrderStatuses.Cancelled;
+        }
+
+        throw new AppException(
+            "Geçersiz sipariş durumu.",
+            400,
+            "invalidOrderStatus"
+        );
+    }
+
+    private async Task<OrderDto>
+    GetOrderByIdForAdminAsync(
+        int orderId
+    )
+    {
+        var order =
+            await _context.Orders
+                .AsNoTracking()
+                .Where(
+                    x => x.Id == orderId
+                )
+                .Select(
+                    x => new OrderDto
+                    {
+                        Id = x.Id,
+
+                        Status =
+                            x.Status,
+
+                        TotalPrice =
+                            x.TotalPrice,
+
+                        ShippingFullName =
+                            x.ShippingFullName,
+
+                        ShippingCity =
+                            x.ShippingCity,
+
+                        ShippingDistrict =
+                            x.ShippingDistrict,
+
+                        ShippingAddressLine =
+                            x.ShippingAddressLine,
+
+                        CreatedAt =
+                            x.CreatedAt,
+
+                        Items =
+                            x.Items
+                                .Select(
+                                    i =>
+                                        new OrderItemDto
+                                        {
+                                            ProductId =
+                                                i.ProductId,
+
+                                            ProductName =
+                                                i.ProductName,
+
+                                            UnitPrice =
+                                                i.UnitPrice,
+
+                                            Quantity =
+                                                i.Quantity,
+
+                                            LineTotal =
+                                                i.LineTotal
+                                        }
+                                )
+                                .ToList()
+                    }
+                )
+                .FirstOrDefaultAsync();
+
+        if (order == null)
+        {
+            throw new AppException(
+                "Sipariş bulunamadı.",
+                404,
+                "orderNotFound"
+            );
+        }
+
+        return order;
     }
 }

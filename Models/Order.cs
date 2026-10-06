@@ -1,3 +1,5 @@
+using ShopApi.Constants;
+
 namespace ShopApi.Models;
 
 public class Order
@@ -8,7 +10,8 @@ public class Order
 
     public User User { get; set; } = null!;
 
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } =
+    OrderStatuses.Pending;
 
     public decimal TotalPrice { get; set; }
 

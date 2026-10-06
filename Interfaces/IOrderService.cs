@@ -17,4 +17,9 @@ public interface IOrderService
         int userId,
         int orderId
     );
+
+    Task<OrderDto> UpdateStatusAsync(
+        int orderId,
+        UpdateOrderStatusDto dto
+    );
 }

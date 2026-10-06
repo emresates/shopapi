@@ -100,4 +100,26 @@ public class OrdersController : ControllerBase
 
         return id;
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPatch("{id:int}/status")]
+    public async Task<IActionResult> UpdateStatus(
+    int id,
+    UpdateOrderStatusDto dto
+)
+    {
+        var result =
+            await _orderService.UpdateStatusAsync(
+                id,
+                dto
+            );
+
+        return Ok(
+            ApiResponse<OrderDto>.Success(
+                result,
+                200,
+                "Sipariş durumu güncellendi."
+            )
+        );
+    }
 }
