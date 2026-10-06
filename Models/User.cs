@@ -21,4 +21,8 @@ public class User
     public List<Favorite> Favorites { get; set; } = new();
 
     public Cart? Cart { get; set; }
+
+    public List<Address> Addresses { get; set; } = new();
+
+    public List<Order> Orders { get; set; } = new();
 }

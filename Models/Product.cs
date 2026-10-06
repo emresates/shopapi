@@ -23,4 +23,6 @@ public class Product
     public List<Favorite> Favorites { get; set; } = new();
 
     public List<CartItem> CartItems { get; set; } = new();
+
+    public List<OrderItem> OrderItems { get; set; } = new();
 }

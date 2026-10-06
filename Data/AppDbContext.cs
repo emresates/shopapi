@@ -24,6 +24,13 @@ public class AppDbContext : DbContext
     public DbSet<Cart> Carts { get; set; }
 
     public DbSet<CartItem> CartItems { get; set; }
+
+    public DbSet<Address> Addresses { get; set; }
+
+    public DbSet<Order> Orders { get; set; }
+
+    public DbSet<OrderItem> OrderItems { get; set; }
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
     )
@@ -92,5 +99,41 @@ public class AppDbContext : DbContext
                 x.ProductId
             })
             .IsUnique();
+
+        modelBuilder.Entity<Address>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.Addresses)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Order>()
+            .Property(x => x.TotalPrice)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<OrderItem>()
+            .Property(x => x.UnitPrice)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<OrderItem>()
+            .Property(x => x.LineTotal)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Order>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.Orders)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(x => x.Order)
+            .WithMany(x => x.Items)
+            .HasForeignKey(x => x.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(x => x.Product)
+            .WithMany(x => x.OrderItems)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
