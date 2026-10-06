@@ -19,9 +19,9 @@ public class OrderService : IOrderService
     }
 
     public async Task<OrderDto> CreateAsync(
-        int userId,
-        CreateOrderDto dto
-    )
+    int userId,
+    CreateOrderDto dto
+)
     {
         var address =
             await _context.Addresses
@@ -67,21 +67,6 @@ public class OrderService : IOrderService
 
         try
         {
-            foreach (var item in cart.Items)
-            {
-                if (
-                    item.Quantity >
-                    item.Product.Stock
-                )
-                {
-                    throw new AppException(
-                        $"{item.Product.Name} için yeterli stok bulunmuyor.",
-                        409,
-                        "insufficientStock"
-                    );
-                }
-            }
-
             var order = new Order
             {
                 UserId = userId,
@@ -114,11 +99,20 @@ public class OrderService : IOrderService
                 var product =
                     cartItem.Product;
 
+                // Stok kontrolü + stok düşürme
+                // TEK ATOMIC DB UPDATE içinde.
+                await DecreaseStockAsync(
+                    product.Id,
+                    cartItem.Quantity,
+                    product.Name
+                );
+
                 var lineTotal =
                     product.Price *
                     cartItem.Quantity;
 
-                totalPrice += lineTotal;
+                totalPrice +=
+                    lineTotal;
 
                 order.Items.Add(
                     new OrderItem
@@ -139,15 +133,14 @@ public class OrderService : IOrderService
                             lineTotal
                     }
                 );
-
-                product.Stock -=
-                    cartItem.Quantity;
             }
 
             order.TotalPrice =
                 totalPrice;
 
-            _context.Orders.Add(order);
+            _context.Orders.Add(
+                order
+            );
 
             _context.CartItems.RemoveRange(
                 cart.Items
@@ -169,7 +162,6 @@ public class OrderService : IOrderService
             throw;
         }
     }
-
     public async Task<List<OrderDto>> GetMyOrdersAsync(
         int userId
     )
@@ -285,5 +277,36 @@ public class OrderService : IOrderService
         }
 
         return order;
+    }
+
+    private async Task DecreaseStockAsync(
+    int productId,
+    int quantity,
+    string productName
+)
+    {
+        var affectedRows =
+            await _context.Products
+                .Where(
+                    x =>
+                        x.Id == productId &&
+                        x.Stock >= quantity
+                )
+                .ExecuteUpdateAsync(
+                    setters =>
+                        setters.SetProperty(
+                            x => x.Stock,
+                            x => x.Stock - quantity
+                        )
+                );
+
+        if (affectedRows == 0)
+        {
+            throw new AppException(
+                $"{productName} için yeterli stok bulunmuyor.",
+                409,
+                "insufficientStock"
+            );
+        }
     }
 }
