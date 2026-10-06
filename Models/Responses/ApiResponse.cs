@@ -8,15 +8,23 @@ public class ApiResponse<T>
 
     public string? Message { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(
+        Condition = JsonIgnoreCondition.WhenWritingNull
+    )]
     public string? ErrCode { get; set; }
 
     public int StatusCode { get; set; }
 
+    [JsonIgnore(
+        Condition = JsonIgnoreCondition.WhenWritingNull
+    )]
+    public PaginationMeta? Pagination { get; set; }
+
     public static ApiResponse<T> Success(
         T data,
         int statusCode = 200,
-        string? message = null
+        string? message = null,
+        PaginationMeta? pagination = null
     )
     {
         return new ApiResponse<T>
@@ -24,7 +32,8 @@ public class ApiResponse<T>
             Data = data,
             Message = message,
             ErrCode = null,
-            StatusCode = statusCode
+            StatusCode = statusCode,
+            Pagination = pagination
         };
     }
 
@@ -39,7 +48,8 @@ public class ApiResponse<T>
             Data = default,
             Message = message,
             ErrCode = errCode,
-            StatusCode = statusCode
+            StatusCode = statusCode,
+            Pagination = null
         };
     }
 }

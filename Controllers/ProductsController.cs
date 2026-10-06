@@ -19,17 +19,23 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [HttpGet]
+    public async Task<IActionResult> GetAll(
+    [FromQuery] ProductQueryDto query
+    )
     {
         var result =
-            await _productService.GetAllAsync();
+            await _productService
+                .GetAllAsync(query);
 
         return Ok(
-            ApiResponse<List<ProductDto>>.Success(
-                result,
-                200,
-                "Ürünler getirildi."
-            )
+            ApiResponse<List<ProductDto>>
+                .Success(
+                    result.Items,
+                    200,
+                    "Ürünler getirildi.",
+                    result.Pagination
+                )
         );
     }
 

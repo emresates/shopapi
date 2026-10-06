@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
 
     public DbSet<ProductImage> ProductImages { get; set; }
 
+    public DbSet<User> Users { get; set; }
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
     )
@@ -38,5 +39,8 @@ public class AppDbContext : DbContext
             .WithMany(x => x.Images)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<User>()
+            .HasIndex(x => x.Email)
+            .IsUnique();
     }
 }

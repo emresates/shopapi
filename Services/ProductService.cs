@@ -4,6 +4,7 @@ using ShopApi.Dtos.Products;
 using ShopApi.Exceptions;
 using ShopApi.Interfaces;
 using ShopApi.Models;
+using ShopApi.Models.Responses;
 
 namespace ShopApi.Services;
 
@@ -21,41 +22,206 @@ public class ProductService : IProductService
         _imageService = imageService;
     }
 
-    public async Task<List<ProductDto>> GetAllAsync()
+    public async Task<PagedResult<ProductDto>> GetAllAsync(
+    ProductQueryDto request
+)
     {
-        return await _context.Products
-            .AsNoTracking()
-            .Include(x => x.Category)
-            .Include(x => x.Images)
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new ProductDto
+        var page =
+            request.Page < 1
+                ? 1
+                : request.Page;
+
+        var pageSize =
+            request.PageSize switch
             {
-                Id = x.Id,
-                Name = x.Name,
-                Description = x.Description,
-                Price = x.Price,
-                Stock = x.Stock,
-                CreatedAt = x.CreatedAt,
-                CategoryId = x.CategoryId,
-                CategoryName = x.Category.Name,
+                < 1 => 20,
+                > 100 => 100,
+                _ => request.PageSize
+            };
 
-                Images = x.Images
-                    .OrderByDescending(i => i.IsMain)
-                    .ThenBy(i => i.Id)
-                    .Select(i => new ProductImageDto
+        if (
+            request.MinPrice.HasValue &&
+            request.MinPrice.Value < 0
+        )
+        {
+            throw new AppException(
+                "Minimum fiyat negatif olamaz.",
+                400,
+                "minPriceInvalid"
+            );
+        }
+
+        if (
+            request.MaxPrice.HasValue &&
+            request.MaxPrice.Value < 0
+        )
+        {
+            throw new AppException(
+                "Maksimum fiyat negatif olamaz.",
+                400,
+                "maxPriceInvalid"
+            );
+        }
+
+        if (
+            request.MinPrice.HasValue &&
+            request.MaxPrice.HasValue &&
+            request.MinPrice.Value >
+            request.MaxPrice.Value
+        )
+        {
+            throw new AppException(
+                "Minimum fiyat maksimum fiyattan büyük olamaz.",
+                400,
+                "priceRangeInvalid"
+            );
+        }
+
+        var query =
+            _context.Products
+                .AsNoTracking()
+                .AsQueryable();
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                request.Search
+            )
+        )
+        {
+            var search =
+                request.Search.Trim();
+
+            query = query.Where(
+                x =>
+                    EF.Functions.ILike(
+                        x.Name,
+                        $"%{search}%"
+                    )
+                    ||
+                    EF.Functions.ILike(
+                        x.Description,
+                        $"%{search}%"
+                    )
+            );
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            query = query.Where(
+                x =>
+                    x.CategoryId ==
+                    request.CategoryId.Value
+            );
+        }
+
+        if (request.MinPrice.HasValue)
+        {
+            query = query.Where(
+                x =>
+                    x.Price >=
+                    request.MinPrice.Value
+            );
+        }
+
+        if (request.MaxPrice.HasValue)
+        {
+            query = query.Where(
+                x =>
+                    x.Price <=
+                    request.MaxPrice.Value
+            );
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var products =
+            await query
+                .OrderByDescending(
+                    x => x.CreatedAt
+                )
+                .Skip(
+                    (page - 1) *
+                    pageSize
+                )
+                .Take(pageSize)
+                .Select(
+                    x => new ProductDto
                     {
-                        Id = i.Id,
-                        ImageUrl = i.ImageUrl,
-                        IsMain = i.IsMain
-                    })
-                    .ToList()
-            })
-            .ToListAsync();
-    }
+                        Id = x.Id,
 
+                        Name = x.Name,
+
+                        Description =
+                            x.Description,
+
+                        Price = x.Price,
+
+                        Stock = x.Stock,
+
+                        CreatedAt =
+                            x.CreatedAt,
+
+                        CategoryId =
+                            x.CategoryId,
+
+                        CategoryName =
+                            x.Category.Name,
+
+                        Images =
+                            x.Images
+                                .OrderByDescending(
+                                    i => i.IsMain
+                                )
+                                .ThenBy(
+                                    i => i.Id
+                                )
+                                .Select(
+                                    i =>
+                                        new ProductImageDto
+                                        {
+                                            Id = i.Id,
+
+                                            ImageUrl =
+                                                i.ImageUrl,
+
+                                            IsMain =
+                                                i.IsMain
+                                        }
+                                )
+                                .ToList()
+                    }
+                )
+                .ToListAsync();
+
+        var totalPages =
+            (int)Math.Ceiling(
+                totalCount /
+                (double)pageSize
+            );
+
+        return new PagedResult<ProductDto>
+        {
+            Items = products,
+
+            Pagination =
+                new PaginationMeta
+                {
+                    Page = page,
+
+                    PageSize = pageSize,
+
+                    TotalCount =
+                        totalCount,
+
+                    TotalPages =
+                        totalPages
+                }
+        };
+    }
     public async Task<ProductDto> GetByIdAsync(
-        int id
-    )
+            int id
+        )
     {
         var product =
             await _context.Products

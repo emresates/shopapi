@@ -1,10 +1,13 @@
 using ShopApi.Dtos.Products;
+using ShopApi.Models.Responses;
 
 namespace ShopApi.Interfaces;
 
 public interface IProductService
 {
-    Task<List<ProductDto>> GetAllAsync();
+    Task<PagedResult<ProductDto>> GetAllAsync(
+        ProductQueryDto query
+    );
 
     Task<ProductDto> GetByIdAsync(int id);
 

@@ -1,4 +1,7 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using ShopApi.Data;
 using ShopApi.Interfaces;
 using ShopApi.Middlewares;
@@ -33,10 +36,72 @@ builder.Services.AddScoped<
     ProductService
 >();
 
-// BURAYA KADAR bütün builder.Services kayıtları yapılmalı.
-// Bundan sonra service eklemiyoruz.
+builder.Services.AddScoped<
+    ITokenService,
+    TokenService
+>();
+
+builder.Services.AddScoped<
+    IAuthService,
+    AuthService
+>();
+
+var jwtKey =
+    builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Key bulunamadı."
+    );
+
+builder.Services
+    .AddAuthentication(
+        JwtBearerDefaults
+            .AuthenticationScheme
+    )
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+
+                ValidateAudience = true,
+
+                ValidateLifetime = true,
+
+                ValidateIssuerSigningKey =
+                    true,
+
+                ValidIssuer =
+                    builder.Configuration[
+                        "Jwt:Issuer"
+                    ],
+
+                ValidAudience =
+                    builder.Configuration[
+                        "Jwt:Audience"
+                    ],
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            jwtKey
+                        )
+                    ),
+
+                ClockSkew =
+                    TimeSpan.Zero
+            };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
+app.UseAuthentication();
+
+app.UseAuthorization();
+
+app.MapControllers();
 
 // Global exception middleware
 app.UseMiddleware<ExceptionMiddleware>();
