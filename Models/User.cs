@@ -19,4 +19,6 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public List<Favorite> Favorites { get; set; } = new();
+
+    public Cart? Cart { get; set; }
 }

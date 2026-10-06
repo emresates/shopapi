@@ -52,6 +52,11 @@ builder.Services.AddScoped<
     FavoriteService
 >();
 
+builder.Services.AddScoped<
+    ICartService,
+    CartService
+>();
+
 var jwtKey =
     builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException(

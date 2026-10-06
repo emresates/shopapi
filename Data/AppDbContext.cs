@@ -20,6 +20,10 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
 
     public DbSet<Favorite> Favorites { get; set; }
+
+    public DbSet<Cart> Carts { get; set; }
+
+    public DbSet<CartItem> CartItems { get; set; }
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
     )
@@ -62,5 +66,31 @@ public class AppDbContext : DbContext
             .WithMany(x => x.Favorites)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Cart>()
+            .HasOne(x => x.User)
+            .WithOne(x => x.Cart)
+            .HasForeignKey<Cart>(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(x => x.Cart)
+            .WithMany(x => x.Items)
+            .HasForeignKey(x => x.CartId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(x => x.Product)
+            .WithMany(x => x.CartItems)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CartItem>()
+            .HasIndex(x => new
+            {
+                x.CartId,
+                x.ProductId
+            })
+            .IsUnique();
     }
 }
