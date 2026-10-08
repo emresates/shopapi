@@ -135,65 +135,46 @@ public class ProductService : IProductService
         var totalCount =
             await query.CountAsync();
 
-        var products =
-            await query
-                .OrderByDescending(
-                    x => x.CreatedAt
-                )
-                .Skip(
-                    (page - 1) *
-                    pageSize
-                )
-                .Take(pageSize)
-                .Select(
-                    x => new ProductDto
+        var products = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new ProductDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Description = x.Description,
+                Price = x.Price,
+                Stock = x.Stock,
+                CreatedAt = x.CreatedAt,
+
+                CategoryId = x.CategoryId,
+                CategoryName = x.Category.Name,
+
+                Images = x.Images
+                    .OrderByDescending(i => i.IsMain)
+                    .ThenBy(i => i.Id)
+                    .Select(i => new ProductImageDto
                     {
-                        Id = x.Id,
+                        Id = i.Id,
+                        ImageUrl = i.ImageUrl,
+                        IsMain = i.IsMain
+                    })
+                    .ToList(),
 
-                        Name = x.Name,
+                ReviewCount = x.Reviews.Count(),
 
-                        Description =
-                            x.Description,
+                AverageRating = x.Reviews
+                    .Select(r => (double?)r.Rating)
+                    .Average() ?? 0
+            })
+            .ToListAsync();
 
-                        Price = x.Price,
-
-                        Stock = x.Stock,
-
-                        CreatedAt =
-                            x.CreatedAt,
-
-                        CategoryId =
-                            x.CategoryId,
-
-                        CategoryName =
-                            x.Category.Name,
-
-                        Images =
-                            x.Images
-                                .OrderByDescending(
-                                    i => i.IsMain
-                                )
-                                .ThenBy(
-                                    i => i.Id
-                                )
-                                .Select(
-                                    i =>
-                                        new ProductImageDto
-                                        {
-                                            Id = i.Id,
-
-                                            ImageUrl =
-                                                i.ImageUrl,
-
-                                            IsMain =
-                                                i.IsMain
-                                        }
-                                )
-                                .ToList()
-                    }
-                )
-                .ToListAsync();
-
+        foreach (var product in products)
+        {
+            product.AverageRating =
+                Math.Round(product.AverageRating, 2);
+        }
         var totalPages =
             (int)Math.Ceiling(
                 totalCount /
@@ -219,18 +200,42 @@ public class ProductService : IProductService
                 }
         };
     }
-    public async Task<ProductDto> GetByIdAsync(
-            int id
-        )
+
+    public async Task<ProductDto> GetByIdAsync(int id)
     {
-        var product =
-            await _context.Products
-                .AsNoTracking()
-                .Include(x => x.Category)
-                .Include(x => x.Images)
-                .FirstOrDefaultAsync(
-                    x => x.Id == id
-                );
+        var product = await _context.Products
+            .AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => new ProductDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Description = x.Description,
+                Price = x.Price,
+                Stock = x.Stock,
+                CreatedAt = x.CreatedAt,
+
+                CategoryId = x.CategoryId,
+                CategoryName = x.Category.Name,
+
+                Images = x.Images
+                    .OrderByDescending(i => i.IsMain)
+                    .ThenBy(i => i.Id)
+                    .Select(i => new ProductImageDto
+                    {
+                        Id = i.Id,
+                        ImageUrl = i.ImageUrl,
+                        IsMain = i.IsMain
+                    })
+                    .ToList(),
+
+                ReviewCount = x.Reviews.Count(),
+
+                AverageRating = x.Reviews
+                    .Select(r => (double?)r.Rating)
+                    .Average() ?? 0
+            })
+            .FirstOrDefaultAsync();
 
         if (product == null)
         {
@@ -241,7 +246,10 @@ public class ProductService : IProductService
             );
         }
 
-        return MapToDto(product);
+        product.AverageRating =
+            Math.Round(product.AverageRating, 2);
+
+        return product;
     }
 
     public async Task<ProductDto> CreateAsync(

@@ -24,4 +24,8 @@ public interface IReviewService
         int userId,
         int reviewId
     );
+
+    Task<ReviewSummaryDto> GetSummaryAsync(
+        int productId
+    );
 }

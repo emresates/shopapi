@@ -116,4 +116,21 @@ public class ReviewsController : ControllerBase
 
         return userId;
     }
+
+    [HttpGet("product/{productId:int}/summary")]
+    public async Task<IActionResult> GetSummary(
+    int productId
+    )
+    {
+        var result = await _reviewService
+            .GetSummaryAsync(productId);
+
+        return Ok(
+            ApiResponse<ReviewSummaryDto>.Success(
+                result,
+                200,
+                "Ürün değerlendirme özeti getirildi."
+            )
+        );
+    }
 }

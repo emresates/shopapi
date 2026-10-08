@@ -191,4 +191,42 @@ public class ReviewService : IReviewService
             })
             .FirstAsync();
     }
+
+    public async Task<ReviewSummaryDto> GetSummaryAsync(
+        int productId
+    )
+    {
+        var productExists = await _context.Products
+            .AnyAsync(x => x.Id == productId);
+
+        if (!productExists)
+        {
+            throw new AppException(
+                "Ürün bulunamadı.",
+                404,
+                "productNotFound"
+            );
+        }
+
+        var summary = await _context.Reviews
+            .Where(x => x.ProductId == productId)
+            .GroupBy(x => x.ProductId)
+            .Select(g => new
+            {
+                ReviewCount = g.Count(),
+                AverageRating = g.Average(x => (double)x.Rating)
+            })
+            .FirstOrDefaultAsync();
+
+        return new ReviewSummaryDto
+        {
+            ProductId = productId,
+
+            AverageRating = summary == null
+                ? 0
+                : Math.Round(summary.AverageRating, 2),
+
+            ReviewCount = summary?.ReviewCount ?? 0
+        };
+    }
 }

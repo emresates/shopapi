@@ -19,4 +19,8 @@ public class ProductDto
     public string CategoryName { get; set; } = "";
 
     public List<ProductImageDto> Images { get; set; } = new();
+
+    public double AverageRating { get; set; }
+
+    public int ReviewCount { get; set; }
 }
