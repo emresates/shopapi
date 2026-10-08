@@ -28,4 +28,6 @@ public class User
 
     public List<OrderStatusHistory> OrderStatusChanges
     { get; set; } = new();
+
+    public List<Review> Reviews { get; set; } = new();
 }

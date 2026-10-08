@@ -72,6 +72,11 @@ builder.Services.AddScoped<
     OrderService
 >();
 
+builder.Services.AddScoped<
+    IReviewService,
+    ReviewService
+>();
+
 var jwtKey =
     builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException(

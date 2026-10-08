@@ -34,6 +34,8 @@ public class AppDbContext : DbContext
     public DbSet<OrderStatusHistory> OrderStatusHistories
     => Set<OrderStatusHistory>();
 
+    public DbSet<Review> Reviews { get; set; }
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
     )
@@ -141,21 +143,47 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<OrderStatusHistory>(entity =>
             {
-            entity.HasOne(x => x.Order)
-                .WithMany(x => x.StatusHistory)
-                .HasForeignKey(x => x.OrderId)
+                entity.HasOne(x => x.Order)
+                    .WithMany(x => x.StatusHistory)
+                    .HasForeignKey(x => x.OrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ChangedByUser)
+                    .WithMany(x => x.OrderStatusChanges)
+                    .HasForeignKey(x => x.ChangedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(x => new
+                {
+                    x.OrderId,
+                    x.ChangedAt
+                });
+            });
+
+        modelBuilder.Entity<Review>(entity =>
+            {
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.Reviews)
+                .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(x => x.ChangedByUser)
-                .WithMany(x => x.OrderStatusChanges)
-                .HasForeignKey(x => x.ChangedByUserId)
-                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.Product)
+                .WithMany(x => x.Reviews)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(x => new
             {
-                x.OrderId,
-                x.ChangedAt
-            });
+                x.UserId,
+                x.ProductId
+            }).IsUnique();
+
+            entity.ToTable(t =>
+                t.HasCheckConstraint(
+                    "CK_Reviews_Rating",
+                    "\"Rating\" BETWEEN 1 AND 5"
+                )
+            );
             });
     }
 }

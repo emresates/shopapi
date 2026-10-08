@@ -25,4 +25,6 @@ public class Product
     public List<CartItem> CartItems { get; set; } = new();
 
     public List<OrderItem> OrderItems { get; set; } = new();
+
+    public List<Review> Reviews { get; set; } = new();
 }
