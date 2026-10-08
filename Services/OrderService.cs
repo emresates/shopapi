@@ -315,34 +315,36 @@ public class OrderService : IOrderService
     public async Task<OrderDto> CancelAsync(
      int userId,
      int orderId
- )
+    )
     {
         return await ChangeStatusAsync(
             orderId,
             OrderStatuses.Cancelled,
-            userId
+            actorUserId: userId,
+            customerUserId: userId
         );
     }
 
     public async Task<OrderDto> UpdateStatusAsync(
         int orderId,
-        UpdateOrderStatusDto dto
+        UpdateOrderStatusDto dto,
+        int adminUserId
     )
     {
-        var newStatus = NormalizeStatus(
-            dto.Status
-        );
+        var newStatus = NormalizeStatus(dto.Status);
 
         return await ChangeStatusAsync(
             orderId,
-            newStatus
+            newStatus,
+            actorUserId: adminUserId
         );
     }
 
     private async Task<OrderDto> ChangeStatusAsync(
-        int orderId,
-        string newStatus,
-        int? customerUserId = null
+            int orderId,
+            string newStatus,
+            int actorUserId,
+            int? customerUserId = null
     )
     {
         await using var transaction =
@@ -455,6 +457,23 @@ public class OrderService : IOrderService
                     }
                 }
             }
+
+            var history = new OrderStatusHistory
+            {
+                OrderId = orderId,
+
+                OldStatus = order.Status,
+
+                NewStatus = newStatus,
+
+                ChangedByUserId = actorUserId,
+
+                ChangedAt = DateTime.UtcNow
+            };
+
+            _context.OrderStatusHistories.Add(history);
+
+            await _context.SaveChangesAsync();
 
             await transaction.CommitAsync();
         }
@@ -648,6 +667,54 @@ public class OrderService : IOrderService
                 TotalQuantity = x.Items.Sum(
                     i => i.Quantity
                 )
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<OrderStatusHistoryDto>>
+    GetStatusHistoryAsync(
+        int orderId,
+        int requestingUserId,
+        bool isAdmin
+    )
+    {
+        var orderExists = await _context.Orders
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Id == orderId &&
+                (isAdmin || x.UserId == requestingUserId)
+            );
+
+        if (!orderExists)
+        {
+            throw new AppException(
+                "Sipariş bulunamadı.",
+                404,
+                "orderNotFound"
+            );
+        }
+
+        return await _context.OrderStatusHistories
+            .AsNoTracking()
+            .Where(x => x.OrderId == orderId)
+            .OrderBy(x => x.ChangedAt)
+            .ThenBy(x => x.Id)
+            .Select(x => new OrderStatusHistoryDto
+            {
+                Id = x.Id,
+
+                OldStatus = x.OldStatus,
+
+                NewStatus = x.NewStatus,
+
+                ChangedByUserId = x.ChangedByUserId,
+
+                ChangedByName =
+                    x.ChangedByUser != null
+                        ? x.ChangedByUser.Name
+                        : null,
+
+                ChangedAt = x.ChangedAt
             })
             .ToListAsync();
     }

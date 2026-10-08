@@ -112,7 +112,8 @@ public class OrdersController : ControllerBase
         var result =
             await _orderService.UpdateStatusAsync(
                 id,
-                dto
+                dto,
+                GetUserId()
             );
 
         return Ok(
@@ -155,6 +156,31 @@ public class OrdersController : ControllerBase
                 result,
                 200,
                 "Tüm siparişler getirildi."
+            )
+        );
+    }
+
+    [HttpGet("{id:int}/history")]
+    public async Task<IActionResult> GetStatusHistory(
+    int id
+)
+    {
+        var userId = GetUserId();
+
+        var isAdmin = User.IsInRole(Roles.Admin);
+
+        var result =
+            await _orderService.GetStatusHistoryAsync(
+                id,
+                userId,
+                isAdmin
+            );
+
+        return Ok(
+            ApiResponse<List<OrderStatusHistoryDto>>.Success(
+                result,
+                200,
+                "Sipariş geçmişi getirildi."
             )
         );
     }

@@ -20,7 +20,8 @@ public interface IOrderService
 
     Task<OrderDto> UpdateStatusAsync(
         int orderId,
-        UpdateOrderStatusDto dto
+        UpdateOrderStatusDto dto,
+        int adminUserId
     );
 
     Task<OrderDto> CancelAsync(
@@ -29,4 +30,10 @@ public interface IOrderService
 );
 
     Task<List<AdminOrderDto>> GetAllForAdminAsync();
+
+    Task<List<OrderStatusHistoryDto>> GetStatusHistoryAsync(
+        int orderId,
+        int requestingUserId,
+        bool isAdmin
+    );
 }

@@ -31,4 +31,7 @@ public class Order
         DateTime.UtcNow;
 
     public List<OrderItem> Items { get; set; } = new();
+
+    public List<OrderStatusHistory> StatusHistory
+    { get; set; } = new();
 }

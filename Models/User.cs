@@ -25,4 +25,7 @@ public class User
     public List<Address> Addresses { get; set; } = new();
 
     public List<Order> Orders { get; set; } = new();
+
+    public List<OrderStatusHistory> OrderStatusChanges
+    { get; set; } = new();
 }

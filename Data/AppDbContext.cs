@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
 
     public DbSet<OrderItem> OrderItems { get; set; }
 
+    public DbSet<OrderStatusHistory> OrderStatusHistories
+    => Set<OrderStatusHistory>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
     )
@@ -135,5 +138,24 @@ public class AppDbContext : DbContext
             .WithMany(x => x.OrderItems)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OrderStatusHistory>(entity =>
+            {
+            entity.HasOne(x => x.Order)
+                .WithMany(x => x.StatusHistory)
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.ChangedByUser)
+                .WithMany(x => x.OrderStatusChanges)
+                .HasForeignKey(x => x.ChangedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(x => new
+            {
+                x.OrderId,
+                x.ChangedAt
+            });
+            });
     }
 }
