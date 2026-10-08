@@ -205,7 +205,14 @@ public class OrderService : IOrderService
                                 i.Quantity,
 
                             LineTotal =
-                                i.LineTotal
+                                i.LineTotal,
+
+                            MainImageUrl =
+                                i.Product.Images
+                                    .OrderByDescending(img => img.IsMain)
+                                    .ThenBy(img => img.Id)
+                                    .Select(img => img.ImageUrl)
+                                    .FirstOrDefault()
                         }
                     ).ToList()
             })
@@ -263,7 +270,14 @@ public class OrderService : IOrderService
                                     i.Quantity,
 
                                 LineTotal =
-                                    i.LineTotal
+                                    i.LineTotal,
+
+                                MainImageUrl =
+                                    i.Product.Images
+                                        .OrderByDescending(img => img.IsMain)
+                                        .ThenBy(img => img.Id)
+                                        .Select(img => img.ImageUrl)
+                                        .FirstOrDefault()
                             }
                         ).ToList()
                 })
@@ -622,7 +636,14 @@ public class OrderService : IOrderService
                                                 i.Quantity,
 
                                             LineTotal =
-                                                i.LineTotal
+                                                i.LineTotal,
+
+                                            MainImageUrl =
+                                                i.Product.Images
+                                                    .OrderByDescending(img => img.IsMain)
+                                                    .ThenBy(img => img.Id)
+                                                    .Select(img => img.ImageUrl)
+                                                    .FirstOrDefault()
                                         }
                                 )
                                 .ToList()

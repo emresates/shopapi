@@ -11,4 +11,7 @@ public class OrderItemDto
     public int Quantity { get; set; }
 
     public decimal LineTotal { get; set; }
+
+    // Ana görsel, yoksa ilk görsel; görseli olmayan üründe null.
+    public string? MainImageUrl { get; set; }
 }
