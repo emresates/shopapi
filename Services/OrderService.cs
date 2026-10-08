@@ -312,63 +312,170 @@ public class OrderService : IOrderService
         }
     }
 
-    public async Task<OrderDto> UpdateStatusAsync(
-    int orderId,
-    UpdateOrderStatusDto dto
-)
+    public async Task<OrderDto> CancelAsync(
+     int userId,
+     int orderId
+ )
     {
-        var order =
-            await _context.Orders
-                .FirstOrDefaultAsync(
-                    x => x.Id == orderId
-                );
-
-        if (order == null)
-        {
-            throw new AppException(
-                "Sipariş bulunamadı.",
-                404,
-                "orderNotFound"
-            );
-        }
-
-        var newStatus =
-            NormalizeStatus(dto.Status);
-
-        if (order.Status == newStatus)
-        {
-            throw new AppException(
-                "Sipariş zaten bu durumda.",
-                409,
-                "orderAlreadyInStatus"
-            );
-        }
-
-        var canTransition =
-            OrderStatusRules.CanTransition(
-                order.Status,
-                newStatus
-            );
-
-        if (!canTransition)
-        {
-            throw new AppException(
-                $"{order.Status} durumundaki sipariş {newStatus} durumuna geçirilemez.",
-                409,
-                "invalidOrderStatusTransition"
-            );
-        }
-
-        order.Status =
-            newStatus;
-
-        await _context.SaveChangesAsync();
-
-        return await GetOrderByIdForAdminAsync(
-            order.Id
+        return await ChangeStatusAsync(
+            orderId,
+            OrderStatuses.Cancelled,
+            userId
         );
     }
 
+    public async Task<OrderDto> UpdateStatusAsync(
+        int orderId,
+        UpdateOrderStatusDto dto
+    )
+    {
+        var newStatus = NormalizeStatus(
+            dto.Status
+        );
+
+        return await ChangeStatusAsync(
+            orderId,
+            newStatus
+        );
+    }
+
+    private async Task<OrderDto> ChangeStatusAsync(
+        int orderId,
+        string newStatus,
+        int? customerUserId = null
+    )
+    {
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var query = _context.Orders
+                .AsNoTracking()
+                .Where(x => x.Id == orderId);
+
+            // Müşteri yalnızca kendi siparişini değiştirebilir.
+            if (customerUserId.HasValue)
+            {
+                query = query.Where(
+                    x => x.UserId == customerUserId.Value
+                );
+            }
+
+            var order = await query
+                .Select(x => new
+                {
+                    x.Id,
+                    x.Status,
+
+                    Items = x.Items.Select(i => new
+                    {
+                        i.ProductId,
+                        i.Quantity
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (order == null)
+            {
+                throw new AppException(
+                    "Sipariş bulunamadı.",
+                    404,
+                    "orderNotFound"
+                );
+            }
+
+            if (order.Status == newStatus)
+            {
+                throw new AppException(
+                    "Sipariş zaten bu durumda.",
+                    409,
+                    "orderAlreadyInStatus"
+                );
+            }
+
+            if (!OrderStatusRules.CanTransition(
+                order.Status,
+                newStatus
+            ))
+            {
+                throw new AppException(
+                    $"{order.Status} durumundan {newStatus} durumuna geçilemez.",
+                    409,
+                    "invalidOrderStatusTransition"
+                );
+            }
+
+            // Eş zamanlı isteklerde sadece mevcut durumu
+            // hâlâ aynı olan işlem başarılı olabilir.
+            var affectedRows = await _context.Orders
+                .Where(x =>
+                    x.Id == orderId &&
+                    x.Status == order.Status
+                )
+                .ExecuteUpdateAsync(setters =>
+                    setters.SetProperty(
+                        x => x.Status,
+                        newStatus
+                    )
+                );
+
+            if (affectedRows != 1)
+            {
+                throw new AppException(
+                    "Sipariş durumu başka bir işlem tarafından değiştirildi.",
+                    409,
+                    "orderStatusConflict"
+                );
+            }
+
+            // İptal sırasında stokları geri yükle.
+            if (newStatus == OrderStatuses.Cancelled)
+            {
+                foreach (var item in order.Items.OrderBy(
+                    x => x.ProductId
+                ))
+                {
+                    var restored = await _context.Products
+                        .Where(x => x.Id == item.ProductId)
+                        .ExecuteUpdateAsync(setters =>
+                            setters.SetProperty(
+                                x => x.Stock,
+                                x => x.Stock + item.Quantity
+                            )
+                        );
+
+                    if (restored != 1)
+                    {
+                        throw new AppException(
+                            "İptal sırasında ürün stoğu güncellenemedi.",
+                            409,
+                            "stockRestoreFailed"
+                        );
+                    }
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        if (customerUserId.HasValue)
+        {
+            return await GetByIdAsync(
+                customerUserId.Value,
+                orderId
+            );
+        }
+
+        return await GetOrderByIdForAdminAsync(
+            orderId
+        );
+    }
     private static string NormalizeStatus(
     string status
 )
@@ -514,5 +621,34 @@ public class OrderService : IOrderService
         }
 
         return order;
+    }
+
+    public async Task<List<AdminOrderDto>>
+    GetAllForAdminAsync()
+    {
+        return await _context.Orders
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new AdminOrderDto
+            {
+                Id = x.Id,
+
+                UserId = x.UserId,
+
+                CustomerName = x.User.Name,
+
+                CustomerEmail = x.User.Email,
+
+                Status = x.Status,
+
+                TotalPrice = x.TotalPrice,
+
+                CreatedAt = x.CreatedAt,
+
+                TotalQuantity = x.Items.Sum(
+                    i => i.Quantity
+                )
+            })
+            .ToListAsync();
     }
 }

@@ -22,4 +22,11 @@ public interface IOrderService
         int orderId,
         UpdateOrderStatusDto dto
     );
+
+    Task<OrderDto> CancelAsync(
+    int userId,
+    int orderId
+);
+
+    Task<List<AdminOrderDto>> GetAllForAdminAsync();
 }

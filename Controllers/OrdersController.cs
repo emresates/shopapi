@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShopApi.Constants;
 using ShopApi.Dtos.Orders;
 using ShopApi.Exceptions;
 using ShopApi.Interfaces;
@@ -119,6 +120,41 @@ public class OrdersController : ControllerBase
                 result,
                 200,
                 "Sipariş durumu güncellendi."
+            )
+        );
+    }
+
+    [HttpPatch("{id:int}/cancel")]
+    public async Task<IActionResult> Cancel(
+    int id
+)
+    {
+        var result = await _orderService.CancelAsync(
+            GetUserId(),
+            id
+        );
+
+        return Ok(
+            ApiResponse<OrderDto>.Success(
+                result,
+                200,
+                "Sipariş başarıyla iptal edildi."
+            )
+        );
+    }
+
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("admin")]
+    public async Task<IActionResult> GetAllForAdmin()
+    {
+        var result =
+            await _orderService.GetAllForAdminAsync();
+
+        return Ok(
+            ApiResponse<List<AdminOrderDto>>.Success(
+                result,
+                200,
+                "Tüm siparişler getirildi."
             )
         );
     }
